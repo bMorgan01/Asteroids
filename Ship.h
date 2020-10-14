@@ -6,19 +6,19 @@
 #define SFML_TEMPLATE_SHIP_H
 
 
-class Ship : public MySprite {
+class Ship : public Mount {
 public:
-    Ship(const sf::Texture &texture, float scale, float xPos, float yPos, float velocity, float direction) : MySprite(texture, scale, xPos, yPos, velocity, direction) {}
+    Ship(const sf::Texture &texture, float scale, float xPos, float yPos, float velocity, float direction) : Mount(texture, scale, xPos, yPos, velocity, direction) {}
 
-    static void shoot(std::vector<MySprite*>* projectiles, Sound &sound, sf::Texture &texture, float scale, float xPos, float yPos, float velocity, float direction) {
-        projectiles->push_back(new MySprite(texture, scale, xPos, yPos, velocity, direction));
+    void shoot(std::vector<MySprite> &projectiles, Sound &sound, sf::Texture &texture, float scale, float xPos, float yPos, float velocity, float direction) {
+        projectiles.emplace_back(texture, scale, xPos, yPos, velocity, direction);
         sound.play();
     }
 
-    bool hit(RenderWindow &window, vector<MySprite*> &animations, Texture &explosionTexture, default_random_engine &gen, Texture &shieldTexture, int scale, Clock &timer) {
+    bool hit(RenderWindow &window, vector<MySprite> &animations, Texture &explosionTexture, default_random_engine &gen, Texture &shieldTexture, int scale, Clock &timer) {
         uniform_int_distribution<int> angle(0, 359);
-        animations.push_back(new MySprite(explosionTexture, 100, getXPos(), getYPos(), 0, angle(gen)));
-        animations[animations.size() - 1]->makeAnimated(5, 5, 0.01,23);
+        animations.emplace_back(explosionTexture, 100, getXPos(), getYPos(), 0, angle(gen));
+        animations[animations.size() - 1].makeAnimated(5, 5, 0.01,23);
 
         setPosition(window.getSize().x/2, window.getSize().y/2);
         setDirection(0);
@@ -29,10 +29,10 @@ public:
         return lives <= 0;
     }
 
-    void newLife(vector<Drawable*> &gui, Texture &life, RenderWindow &window, Sound &sound) {
+    void newLife(vector<MySprite> &lifeVec, Texture &life, RenderWindow &window, Sound &sound) {
         setNumLivesAdded(getNumLivesAdded() + 1);
         setLives(getLives() + 1);
-        gui.insert(gui.begin() + getLives(),new MySprite(life, 20, window.getSize().x - ((getLives()-1)*40 + 25), 25, 0, 270));
+        lifeVec.emplace_back(life, 20,window.getSize().x - ((getLives() - 1) * 40 + 25), 25, 0,270);
         sound.play();
     }
 
@@ -44,14 +44,19 @@ public:
         this->lives = lives;
     }
 
-    void setShield(bool shield, Texture* texture = nullptr, int scale = 0, Clock* timer = nullptr) {
+    void setShield(bool shield, Texture* texture = nullptr, float scale = 0, Clock* timer = nullptr) {
         this->shield = shield;
 
         if (shield) {
-            setRider(new MySprite(*texture, scale));
+            Rider temp(*texture, scale);
+            temp.setType("Shield");
+            addRider(temp);
             timer->restart();
-        } else
-            setRider(nullptr);
+        } else {
+            for (int i = 0; i < riders.size(); i++) {
+                if (riders[i].getType() == "Shield") removeRider(i);
+            }
+        }
     }
 
     bool hasShield() const {

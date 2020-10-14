@@ -5,9 +5,9 @@
 #ifndef SFML_TEMPLATE_ENTITY_H
 #define SFML_TEMPLATE_ENTITY_H
 
-class Entity : public MySprite {
+class Entity : public Mount {
 public:
-    Entity(int health, int points, const sf::Texture &texture, float scale, float xPos, float yPos, float velocity, float direction) : MySprite(texture, scale, xPos, yPos, velocity, direction) {
+    Entity(int health, int points, const sf::Texture &texture, float scale, float xPos, float yPos, float velocity, float direction) : Mount(texture, scale, xPos, yPos, velocity, direction) {
         this->health = health;
         this->points = points;
     }
@@ -22,17 +22,11 @@ public:
 
     void hit() {};
 
-    string getType() {
-        return type;
-    }
-
     int getPoints() const {
         return points;
     }
 protected:
     int health, points;
-
-    string type = "entity";
 };
 
 

@@ -11,18 +11,21 @@
 
 class Menu {
 public:
-    int result;
+    int result, musicPicked = 0;
     bool soundOn = true, musicOn = true;
 
-    Menu() {
-        result = init();
+    Time mTime;
+
+    Menu(int loop, Time time) {
+        musicPicked = loop;
+        result = init(time);
     }
 private:
     sf::SoundBuffer bip;
     sf::Sound bipSound;
     bool playedBip = false;
 
-    int init() {
+    int init(Time time) {
         const int MENU = 0, CREDITS = 1;
         int screen = 0;
 
@@ -85,10 +88,26 @@ private:
         sf::Texture initials;
         initials.loadFromFile("data/Morgan Ben initials.png");
 
-        sf::Music menuLoop;
-        menuLoop.openFromFile("data/Sounds/Unknown Theme.wav");
-        menuLoop.setLoop(true);
-        menuLoop.play();
+        if (musicPicked == 0) {
+            default_random_engine gen(std::chrono::system_clock::now().time_since_epoch().count());
+            uniform_int_distribution<int> loopPicker(1, 2);
+            musicPicked = loopPicker(gen);
+        }
+
+        sf::Music menuLoop1;
+        menuLoop1.openFromFile("data/Sounds/Unknown Theme.wav");
+        menuLoop1.setVolume(60);
+
+        sf::Music menuLoop2;
+        menuLoop2.openFromFile("data/Sounds/loop.wav");
+
+        if (musicPicked == 1) {
+            menuLoop1.setPlayingOffset(time);
+            menuLoop1.play();
+        } else {
+            menuLoop2.setPlayingOffset(time);
+            menuLoop2.play();
+        }
 
         bip.loadFromFile("data/Sounds/rollover.wav");
 
@@ -248,6 +267,7 @@ private:
         sf::Text devText1("ben@benrmorgan.com", oxan, 12);
         devText1.setPosition(mainView.getSize().x/(float)11.5 + devLabel1.getGlobalBounds().width, mainView.getSize().y/(float)3.05);
         devText1.setFillColor(sf::Color::White);
+        devText1.setStyle(sf::Text::Style::Underlined);
 
         sf::Text devLabel2("Repo - ", monkirta, 15);
         devLabel2.setPosition(mainView.getSize().x/(float)11.5, mainView.getSize().y/(float)2.87);
@@ -367,6 +387,16 @@ private:
 
             window.display();                       // display the window
 
+            if (musicPicked == 1 && menuLoop1.getStatus() == Music::Stopped) {
+                menuLoop2.setPlayingOffset(Time::Zero);
+                menuLoop2.play();
+                musicPicked = 2;
+            } else if (musicPicked == 2 && menuLoop2.getStatus() == Music::Stopped) {
+                menuLoop1.setPlayingOffset(Time::Zero);
+                menuLoop1.play();
+                musicPicked = 1;
+            }
+
             sf::Event event{};
             while( window.pollEvent(event) ) {      // ask the window if any events occurred
 
@@ -386,22 +416,32 @@ private:
                             return EXIT_FAILURE;
                         } else if (startButton.getGlobalBounds().contains(mousePosF) && screen == MENU) {
                             playBip();
+
+                            if (musicPicked == 1) mTime = menuLoop1.getPlayingOffset();
+                            else mTime = menuLoop2.getPlayingOffset();
+
+                            menuLoop1.stop();
+                            menuLoop2.stop();
+
                             return EXIT_SUCCESS;
                         } else if (creditsButton.getGlobalBounds().contains(mousePosF) && screen == MENU) {
                             playBip();
                             screen = CREDITS;
                         } else if (issueButton.getGlobalBounds().contains(mousePosF) && screen == CREDITS) {
                             playBip();
-                            ShellExecute(nullptr, "open", "https://github.com/bMorgan01/StarCap/issues", nullptr, nullptr, SW_SHOWNORMAL);
+                            ShellExecute(nullptr, "open", "https://github.com/bMorgan01/Asteroids/issues", nullptr, nullptr, SW_SHOWNORMAL);
                         } else if (devText.getGlobalBounds().contains(mousePosF) && screen == CREDITS) {
                             playBip();
                             ShellExecute(nullptr, "open", "https://www.benrmorgan.com", nullptr, nullptr, SW_SHOWNORMAL);
                         } else if (devText0.getGlobalBounds().contains(mousePosF) && screen == CREDITS) {
                             playBip();
                             ShellExecute(nullptr, "open", "https://github.com/bMorgan01", nullptr, nullptr, SW_SHOWNORMAL);
+                        } else if (devText1.getGlobalBounds().contains(mousePosF) && screen == CREDITS) {
+                            playBip();
+                            ShellExecute(nullptr, "open", "mailto:ben@benrmorgan.com", nullptr, nullptr, SW_SHOWNORMAL);
                         } else if (devText2.getGlobalBounds().contains(mousePosF) && screen == CREDITS) {
                             playBip();
-                            ShellExecute(nullptr, "open", "https://github.com/bMorgan01/StarCap", nullptr, nullptr, SW_SHOWNORMAL);
+                            ShellExecute(nullptr, "open", "https://github.com/bMorgan01/Asteroids", nullptr, nullptr, SW_SHOWNORMAL);
                         } else if (musicText0.getGlobalBounds().contains(mousePosF) && screen == CREDITS) {
                             playBip();
                             ShellExecute(nullptr, "open", "https://www.instagram.com/river.schreck/", nullptr, nullptr, SW_SHOWNORMAL);
@@ -417,8 +457,13 @@ private:
                         } else if (musicButton.getGlobalBounds().contains(mousePosF) && screen == MENU) {
                             playBip();
                             musicOn = !musicOn;
-                            if (!musicOn) menuLoop.setVolume(0);
-                            else menuLoop.setVolume(100);
+                            if (!musicOn) {
+                                menuLoop1.setVolume(0);
+                                menuLoop2.setVolume(0);
+                            } else {
+                                menuLoop1.setVolume(60);
+                                menuLoop2.setVolume(100);
+                            }
                         }
                         break;
                     case sf::Event::MouseMoved:
@@ -428,6 +473,7 @@ private:
                         else if (issueButton.getGlobalBounds().contains(mousePosF) && screen == CREDITS) issueButton.setColor(sf::Color::Green);
                         else if (devText.getGlobalBounds().contains(mousePosF) && screen == CREDITS) devText.setFillColor(sf::Color::Red);
                         else if (devText0.getGlobalBounds().contains(mousePosF) && screen == CREDITS) devText0.setFillColor(sf::Color::Red);
+                        else if (devText1.getGlobalBounds().contains(mousePosF) && screen == CREDITS) devText1.setFillColor(sf::Color::Red);
                         else if (devText2.getGlobalBounds().contains(mousePosF) && screen == CREDITS) devText2.setFillColor(sf::Color::Red);
                         else if (musicText0.getGlobalBounds().contains(mousePosF) && screen == CREDITS) musicText0.setFillColor(sf::Color::Red);
                         else if (musicText1.getGlobalBounds().contains(mousePosF) && screen == CREDITS) musicText1.setFillColor(sf::Color::Red);
@@ -445,6 +491,7 @@ private:
                 if (!issueButton.getGlobalBounds().contains(mousePosF)) issueButton.setColor(sf::Color::Red);
                 if (!devText.getGlobalBounds().contains(mousePosF)) devText.setFillColor(sf::Color::White);
                 if (!devText0.getGlobalBounds().contains(mousePosF)) devText0.setFillColor(sf::Color::White);
+                if (!devText1.getGlobalBounds().contains(mousePosF)) devText1.setFillColor(sf::Color::White);
                 if (!devText2.getGlobalBounds().contains(mousePosF)) devText2.setFillColor(sf::Color::White);
                 if (!musicText0.getGlobalBounds().contains(mousePosF)) musicText0.setFillColor(sf::Color::White);
                 if (!musicText1.getGlobalBounds().contains(mousePosF)) musicText1.setFillColor(sf::Color::White);

@@ -27,18 +27,13 @@ protected:
         IntRect textureRect;
     };
 
-    struct Rider {
-        MySprite* sprite;
-        bool followsDirection = false, followsPosition = true;
-    };
-
     Physics spritePhysics{};
 
     Animation spriteAnimation{};
 
-    Rider spriteRider{};
-
     bool toErase = false, circularHitbox = false;
+
+    string type = "Sprite";
 public:
     enum EdgeBehavior {
         IGNORE, LOOP, BOUNCE
@@ -164,9 +159,9 @@ public:
         setOrigin(spriteAnimation.width/2.0, spriteAnimation.height/2.0);
     }
 
-    void update(RenderWindow* window = nullptr) {
-        spritePhysics.xPos += cos(spritePhysics.direction * (PI/180)) * spritePhysics.velocity;
-        spritePhysics.yPos += -(sin(spritePhysics.direction * (PI/180)) * spritePhysics.velocity);
+    virtual void update(RenderWindow* window = nullptr) {
+        spritePhysics.xPos += cos(spritePhysics.direction * (PI/180.0)) * spritePhysics.velocity;
+        spritePhysics.yPos += -(sin(spritePhysics.direction * (PI/180.0)) * spritePhysics.velocity);
 
         if (edgeBehavior == LOOP) {
             if (spritePhysics.xPos <= -getGlobalBounds().width)
@@ -213,12 +208,6 @@ public:
 
                 spriteAnimation.clock.restart();
             }
-        }
-
-        if (spriteRider.sprite != nullptr) {
-            if (spriteRider.followsPosition) spriteRider.sprite->setPosition(spritePhysics.xPos, spritePhysics.yPos);
-
-            if (spriteRider.followsDirection) spriteRider.sprite->setDirection(spritePhysics.direction);
         }
 
         setPosition(spritePhysics.xPos, spritePhysics.yPos);
@@ -311,16 +300,16 @@ public:
         return toErase;
     }
 
-    void setRider(MySprite* sprite) {
-        spriteRider.sprite = sprite;
-    }
-
-    Rider getRider() {
-        return spriteRider;
-    }
-
     Animation getAnimation() {
         return spriteAnimation;
+    }
+
+    string getType() {
+        return type;
+    }
+
+    void setType(string type) {
+        this->type = std::move(type);
     }
 };
 
