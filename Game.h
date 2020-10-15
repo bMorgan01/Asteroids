@@ -14,7 +14,7 @@ private:
     sf::Texture loadingBarFull;
 
     //update total
-    int totalTextures = 50;
+    int totalTextures = 53;
     int loadedTextures = 0;
 
     sf::Font oxan;
@@ -68,7 +68,7 @@ private:
         Clock fighterClock;
 
         bool poweredUpTurret = false;
-        Clock turretClock, turretFireClock;
+        Clock turretClock, turretFireClock, fighterFireClock;
 
         bool poweredUpTime = false;
         Clock timeClock;
@@ -124,6 +124,10 @@ private:
         turretGun.loadFromFile("data\\turret.png");
         updateLoader(window, "Loading textures...");
 
+        Texture wingmanShip;
+        wingmanShip.loadFromFile("data\\wingmanShip.png");
+        updateLoader(window, "Loading textures...");
+
         Texture blueLaser;
         Collision::CreateTextureAndBitmask(blueLaser, "data\\blue.png");
         updateLoader(window, "Loading textures...");
@@ -134,6 +138,10 @@ private:
 
         Texture redLaser;
         Collision::CreateTextureAndBitmask(redLaser, "data\\redLaser.png");
+        updateLoader(window, "Loading textures...");
+
+        Texture yellowBall;
+        Collision::CreateTextureAndBitmask(yellowBall, "data\\yellowBall.png");
         updateLoader(window, "Loading textures...");
 
         Texture explosion;
@@ -312,6 +320,10 @@ private:
         player.setEdgeBehavior(MySprite::EdgeBehavior::LOOP);
         player.setShield(true, &shield, 12, &shieldTimer);
 
+        MySprite fighter(wingmanShip, 10, -20, -20, 0, 0);
+        fighter.setMaxVelocity(18);
+        fighter.setMinVelocity(0);
+
         gui.push_back(&backSprite);
         gui.push_back(&score);
 
@@ -329,11 +341,22 @@ private:
             if (poweredUpDamage && damageClock.getElapsedTime().asSeconds() > 12) poweredUpDamage = false;
             if (poweredUpSpray && sprayFireClock.getElapsedTime().asSeconds() > 12) poweredUpSpray = false;
             if (poweredUpbackwards && backwardsClock.getElapsedTime().asSeconds() > 12) poweredUpbackwards = false;
-            if (poweredUpFighter && fighterClock.getElapsedTime().asSeconds() > 12) poweredUpFighter = false;
+            if (poweredUpFighter && fighterClock.getElapsedTime().asSeconds() > 12) {
+                poweredUpFighter = false;
+                fighter.setPosition(-20, -20);
+                fighter.setVelocity(0);
+                fighter.setDirection(0);
+            }
             if (poweredUpTurret && turretClock.getElapsedTime().asSeconds() > 12) {
                 poweredUpTurret = false;
                 player.removeRider(0);
-            } if (poweredUpTime && timeClock.getElapsedTime().asSeconds() > 5) poweredUpTime = false;
+            } if (poweredUpTime && timeClock.getElapsedTime().asSeconds() > 5) {
+                for (auto e : enemies) {
+                    e->setVelocity(e->getVelocity() * 8);
+                }
+
+                poweredUpTime = false;
+            }
 
             //****************************************
             //  Handle keypresses below here
@@ -417,8 +440,8 @@ private:
             //  Spawn cycle below here
             //****************************************
 
-            uniform_int_distribution<int> stroidChance(1, 4), powerUpChance(9, 10),
-                    powerUp(7, 8), stroidSize(1, 3),
+            uniform_int_distribution<int> stroidChance(1, 32), powerUpChance(1, 50),
+                    powerUp(1, 8), stroidSize(1, 3),
                     smallTexture(0, smallAsteroids.size() - 1),
                     mediumTexture(0, mediumAsteroids.size() - 1),
                     largeTexture(0, largeAsteroids.size() - 1), side(1, 4),
@@ -428,7 +451,8 @@ private:
             uniform_real_distribution<double> velocity(0.5, 4);
 
             if (spawnClock.getElapsedTime().asSeconds() >= 0.10) {  //spawn chances every .1 sec
-                if (stroidChance(gen) == 1) {                    //stroid spawns happen approx. every half sec
+                int pickedNum = stroidChance(gen);
+                if (pickedNum >= 1 && pickedNum <= (poweredUpTime ? 1 : 8)) {                    //stroid spawns happen approx. every half sec
                     uniform_int_distribution<int> angle;
                     int x = 0, y = 0, s = side(gen);
                     switch (s) {                        //decide which side of window to spawn stroid
@@ -483,22 +507,24 @@ private:
                     }
 
                     int size = stroidSize(gen);
+                    double velo = velocity(gen);
+
                     switch (size) {
                         case 1:
                             enemies.push_back(new Asteroid(size, size * 100, smallAsteroids[smallTexture(gen)], scale(gen), x, y,
-                                                 velocity(gen), (360 + angle(gen)) % 360));
+                                                           poweredUpTime ? velo/8 : velo, (360 + angle(gen)) % 360));
                             break;
                         case 2:
                             enemies.push_back(new Asteroid(size, size * 100, mediumAsteroids[mediumTexture(gen)], scale(gen), x,
-                                                 y, velocity(gen), (360 + angle(gen)) % 360));
+                                                 y, poweredUpTime ? velo/8 : velo, (360 + angle(gen)) % 360));
                             break;
                         case 3:
                             enemies.push_back(new Asteroid(size, size * 100, largeAsteroids[largeTexture(gen)], scaleLarge(gen),
-                                                 x, y, velocity(gen), (360 + angle(gen)) % 360));
+                                                 x, y, poweredUpTime ? velo/8 : velo, (360 + angle(gen)) % 360));
                             break;
                     }
 
-                    if (size == 3 && powerUpChance(gen) == 10) {
+                    if (size == 3 && powerUpChance(gen) == 25) {
                         Texture *temp;
                         string type;
                         switch (powerUp(gen)) {
@@ -553,7 +579,7 @@ private:
 
             player.update(&window);
 
-            if (poweredUpTurret) {
+            if (poweredUpTurret || poweredUpFighter) {
                 int closest = 0;
                 for (int i = 1; i < enemies.size(); i++) {
                     float xDistClosest = enemies[closest]->getXPos() - player.getXPos();
@@ -562,23 +588,79 @@ private:
                     float yDistTest = enemies[i]->getYPos() - player.getYPos();
                     float closeDist = xDistClosest*xDistClosest + yDistClosest*yDistClosest;
                     float testDist = xDistTest*xDistTest + yDistTest*yDistTest;
-                    //float edgeOffsetClosest = player.getGlobalBounds().width/2 + enemies[closest]->getGlobalBounds().width/2;
-                    //float edgeOffsetTest = player.getGlobalBounds().width/2 + enemies[i]->getGlobalBounds().width/2;
+                    float edgeOffsetClosest = player.getGlobalBounds().width/2 + enemies[closest]->getGlobalBounds().width/2;
+                    float edgeOffsetTest = player.getGlobalBounds().width/2 + enemies[i]->getGlobalBounds().width/2;
 
-                    if ((testDist/* - (edgeOffsetTest*edgeOffsetTest)*/) < (closeDist/* - (edgeOffsetClosest*edgeOffsetClosest)*/) )
+                    if ((testDist - (edgeOffsetTest*edgeOffsetTest)) < (closeDist - (edgeOffsetClosest*edgeOffsetClosest)))
                         closest = i;
                 }
 
                 float xDistClosest = enemies[closest]->getXPos() - player.getXPos();
                 float yDistClosest = enemies[closest]->getYPos() - player.getYPos();
+                float distSquared = xDistClosest*xDistClosest + yDistClosest*yDistClosest;
 
-                player.getRidersForEdit()->at(0).setDirection(-(180.0/MySprite::PI) * atan2(yDistClosest, xDistClosest));
+                if (poweredUpTurret) {
+                    float turnAngle = 8;
+                    float goalAngle = -(180.0 / MySprite::PI) * atan2(yDistClosest, xDistClosest);
+                    float diff = fabs(player.getRiders()[0].getDirection() - goalAngle);
 
-                if (turretFireClock.getElapsedTime().asSeconds() > 0.4) {
-                    player.shoot(projectiles, pew, blueLaser, 0.2, player.getPosition().x,
-                                 player.getPosition().y, 20,
-                                 player.getRiders()[0].getDirection());
-                    turretFireClock.restart();
+                    if (player.getRiders()[0].getDirection() > goalAngle && diff >= turnAngle) player.getRidersForEdit()->at(0).turn(turnAngle);
+                    else if (player.getRiders()[0].getDirection() < goalAngle && diff >= turnAngle) player.getRidersForEdit()->at(0).turn(-turnAngle);
+                    else if (player.getRiders()[0].getDirection() > goalAngle && diff < turnAngle) player.getRidersForEdit()->at(0).turn(diff);
+                    else if (player.getRiders()[0].getDirection() < goalAngle && diff < turnAngle) player.getRidersForEdit()->at(0).turn(-diff);
+
+                    if (!ended && turretFireClock.getElapsedTime().asSeconds() > 0.4 && distSquared < (320 * 320) && diff < 45) {
+                        player.shoot(projectiles, pew, blueLaser, 0.2, player.getPosition().x,
+                                     player.getPosition().y, 20,
+                                     player.getRiders()[0].getDirection());
+                        turretFireClock.restart();
+                    }
+                }
+
+                if (poweredUpFighter) {
+                    float xDistClosestFighter = enemies[closest]->getXPos() - fighter.getXPos();
+                    float yDistClosestFighter = enemies[closest]->getYPos() - fighter.getYPos();
+                    float radiusOffsetSquared = (enemies[closest]->getGlobalBounds().width/2)*(enemies[closest]->getGlobalBounds().width/2);
+
+                    float distSquaredFighter = xDistClosestFighter*xDistClosestFighter + yDistClosestFighter*yDistClosestFighter;
+
+                    if (distSquaredFighter - radiusOffsetSquared >= (150*150)) fighter.accelerate(0.5);
+                    else fighter.accelerate(-1);
+
+                    fighter.update(&window);
+
+                    float turnAngle = 12;
+                    double targetAngle = -((atan2(yDistClosestFighter, xDistClosestFighter)) * 180 / MySprite::PI);
+                    targetAngle = fmod(targetAngle, 360);
+                    if (targetAngle < 0)
+                        targetAngle += 360;
+
+                    double changeAngle = std::abs(fighter.getDirection() - targetAngle);
+                    if (changeAngle > 180) changeAngle = std::abs(changeAngle - 360);
+                    if (changeAngle > turnAngle) changeAngle = turnAngle;
+
+                    if (std::abs(fighter.getDirection() - targetAngle) <= 180) fighter.turn(fighter.getDirection() - targetAngle > 0 ? changeAngle : -changeAngle);
+                    else fighter.turn(fighter.getDirection() - targetAngle > 0 ? -changeAngle : changeAngle);
+
+                    if (!ended && fighterFireClock.getElapsedTime().asSeconds() > 0.15 && distSquaredFighter - radiusOffsetSquared < (180 * 180) && (fighter.getDirection() - targetAngle) < 45) {
+                        float dist = 10;
+                        float xDist = dist*cos((MySprite::PI/180)*(fighter.getDirection()+90));
+                        float yDist = dist*sin((MySprite::PI/180)*(fighter.getDirection()+90));
+
+                        player.shoot(projectiles, pew, yellowBall, 2, fighter.getPosition().x - xDist,
+                                     fighter.getPosition().y + yDist, 15,
+                                     fighter.getDirection());
+
+                        player.shoot(projectiles, pew, yellowBall, 2, fighter.getPosition().x + xDist,
+                                     fighter.getPosition().y - yDist, 15,
+                                     fighter.getDirection());
+
+                        projectiles[projectiles.size() - 1].setType("Quarter");
+                        projectiles[projectiles.size() - 2].setType("Quarter");
+
+                        fighterFireClock.restart();
+                    }
+
                 }
             }
 
@@ -603,8 +685,10 @@ private:
                 for (int j = 0; j < projectiles.size(); j++) {
                     if (Collision::PixelPerfectTest(*enemies[i], projectiles[j], 0)) {
                         uniform_int_distribution<int> angle(0, 359);
-                        if (projectiles[j].getType() != "Damage") enemies[i]->setHealth(enemies[i]->getHealth() - 1);
-                        else enemies[i]->setHealth(enemies[i]->getHealth() - 2);
+                        if (projectiles[j].getType() == "Damage") enemies[i]->setHealth(enemies[i]->getHealth() - 2);
+                        else if (projectiles[j].getType() == "Quarter") enemies[i]->setHealth(enemies[i]->getHealth() - 0.25);
+                        else enemies[i]->setHealth(enemies[i]->getHealth() - 1);
+
                         if (enemies[i]->getHealth() <= 0) {
                             if (enemies[i]->getType() == "asteroid")
                                 ((Asteroid *)enemies[i])->hit(animations, enemyBoom, explosion, gen);
@@ -625,7 +709,11 @@ private:
                                 } else if (enemies[i]->getRiders()[0].getType() == "Backwards") {
                                     poweredUpbackwards = true;
                                     backwardsClock.restart();
-                                } else if (enemies[i]->getRiders()[0].getType() == "Fighter") {
+                                } else if (enemies[i]->getRiders()[0].getType() == "Wingman") {
+                                    if (!poweredUpFighter) {
+                                        fighter.setPosition(player.getPosition());
+                                    }
+
                                     poweredUpFighter = true;
                                     fighterClock.restart();
                                 } else if (enemies[i]->getRiders()[0].getType() == "Turret") {
@@ -637,6 +725,12 @@ private:
                                     poweredUpTurret = true;
                                     turretClock.restart();
                                 } else if (enemies[i]->getRiders()[0].getType() == "Time") {
+                                    if (!poweredUpTime) {
+                                        for (auto e : enemies) {
+                                            e->setVelocity(e->getVelocity()/2);
+                                        }
+                                    }
+
                                     poweredUpTime = true;
                                     timeClock.restart();
                                 } else if (enemies[i]->getRiders()[0].getType() == "Shield") {
@@ -675,6 +769,22 @@ private:
                         ended = true;
                         playerLost.play();
                     } else playerBoom.play();
+
+                    poweredUpRapid = false;
+                    poweredUpbackwards = false;
+
+                    poweredUpFighter = false;
+                    fighter.setPosition(-20, -20);
+                    fighter.setVelocity(0);
+                    fighter.setDirection(0);
+
+                    poweredUpTurret = false;
+                    player.removeRider(0);
+
+                    for (auto e : enemies)
+                        e->setVelocity(e->getVelocity() * 8);
+                    poweredUpTime = false;
+
                     lives.erase(lives.begin() + player.getLives()); //remove player icon from top corner
                 }
             }
@@ -724,6 +834,10 @@ private:
                     for (const auto& r : player.getRiders()) {
                         window.draw(r);
                     }
+                }
+
+                if (poweredUpFighter) {
+                    window.draw(fighter);
                 }
             } else {
                 for (auto & i : lost) window.draw(*i);

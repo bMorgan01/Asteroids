@@ -7,16 +7,16 @@
 
 class Entity : public Mount {
 public:
-    Entity(int health, int points, const sf::Texture &texture, float scale, float xPos, float yPos, float velocity, float direction) : Mount(texture, scale, xPos, yPos, velocity, direction) {
+    Entity(float health, int points, const sf::Texture &texture, float scale, float xPos, float yPos, float velocity, float direction) : Mount(texture, scale, xPos, yPos, velocity, direction) {
         this->health = health;
         this->points = points;
     }
 
-    int getHealth() const {
+    float getHealth() const {
         return health;
     }
 
-    void setHealth(int health) {
+    void setHealth(float health) {
         this->health = health;
     }
 
@@ -26,7 +26,8 @@ public:
         return points;
     }
 protected:
-    int health, points;
+    float health;
+    int points;
 };
 
 
