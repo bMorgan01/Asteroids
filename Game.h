@@ -1,3 +1,5 @@
+#include <fstream>
+
 class Game {
 public:
     int result, loop;
@@ -105,6 +107,10 @@ private:
         monkirta.loadFromFile("data\\Fonts\\Monkirta Pursuit NC.ttf");
         updateLoader(window, "Loading fonts...");
 
+        sf::Font skME;
+        skME.loadFromFile("data/Fonts/SKoME.ttf");
+        updateLoader(window, "Loading fonts...");
+
         //********************************************
         //  GRAPHICS
         //********************************************
@@ -178,6 +184,18 @@ private:
 
         Texture turret;
         turret.loadFromFile("data\\Gui\\turret.png");
+        updateLoader(window, "Loading textures...");
+
+        Texture redFilter;
+        redFilter.loadFromFile("data\\Gui\\redFilter.png");
+        updateLoader(window, "Loading textures...");
+
+        Texture scoreBar;
+        scoreBar.loadFromFile("data\\Gui\\score_bar.png");
+        updateLoader(window, "Loading textures...");
+
+        Texture highBar;
+        highBar.loadFromFile("data\\Gui\\high_bar.png");
         updateLoader(window, "Loading textures...");
 
         vector < Texture > largeAsteroids;
@@ -269,9 +287,8 @@ private:
 
         Text score;
         score.setFillColor(Color::White);
-        score.setPosition(10, 10);
+        score.setPosition(12, 8);
         score.setFont(oxan);
-        score.setString("Score: 0");
         score.setCharacterSize(20);
 
         Text destroyed;
@@ -280,7 +297,7 @@ private:
         destroyed.setCharacterSize(70);
         destroyed.setString("Destroyed");
         destroyed.setOrigin(destroyed.getGlobalBounds().width/2.0, destroyed.getGlobalBounds().height/2.0);
-        destroyed.setPosition(window.getSize().x/2.0, window.getSize().y/3.0);
+        destroyed.setPosition(window.getSize().x/2.0, window.getSize().y/3);
 
         Text pressEnter;
         pressEnter.setFillColor(Color::White);
@@ -288,7 +305,31 @@ private:
         pressEnter.setCharacterSize(20);
         pressEnter.setString("Press ENTER to return to the menu...");
         pressEnter.setOrigin(pressEnter.getGlobalBounds().width/2.0, pressEnter.getGlobalBounds().height/2.0);
-        pressEnter.setPosition(window.getSize().x/2.0, window.getSize().y/2.25);
+        pressEnter.setPosition(window.getSize().x/2.0, window.getSize().y/2.4);
+
+        Text highScoreLable;
+        highScoreLable.setFillColor(Color(0, 0, 0, 0));
+        highScoreLable.setOutlineColor(Color::White);
+        highScoreLable.setOutlineThickness(1);
+        highScoreLable.setFont(skME);
+        highScoreLable.setCharacterSize(30);
+        highScoreLable.setString("High Scores");
+        highScoreLable.setOrigin(highScoreLable.getGlobalBounds().width/2.0, highScoreLable.getGlobalBounds().height/2.0);
+        highScoreLable.setPosition(window.getSize().x/2.0, window.getSize().y/2.0);
+
+        Text highScoreEntriesDates[10];
+        Text highScoreEntries[10];
+        for (int i = 0; i < 10; i++) {
+            highScoreEntriesDates[i].setFillColor(Color::White);
+            highScoreEntriesDates[i].setFont(monkirta);
+            highScoreEntriesDates[i].setCharacterSize(20);
+            highScoreEntriesDates[i].setOrigin(0, highScoreEntriesDates[i].getGlobalBounds().height/2.0);
+
+            highScoreEntries[i].setFillColor(Color::White);
+            highScoreEntries[i].setFont(oxan);
+            highScoreEntries[i].setCharacterSize(20);
+            highScoreEntries[i].setOrigin(0, highScoreEntries[i].getGlobalBounds().height/2.0);
+        }
 
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
@@ -310,6 +351,9 @@ private:
 
         lost.push_back(&destroyed);
         lost.push_back(&pressEnter);
+        lost.push_back(&highScoreLable);
+
+        int lostEnd = lost.size() - 1;
 
         MySprite backSprite(background, 100, window.getSize().x / 2,
                  window.getSize().y / 2, 0, 0);
@@ -321,10 +365,59 @@ private:
         player.setShield(true, &shield, 12, &shieldTimer);
 
         MySprite fighter(wingmanShip, 10, -20, -20, 0, 0);
-        fighter.setMaxVelocity(18);
-        fighter.setMinVelocity(0);
+        fighter.setMaxVelocity(10);
+        fighter.setMinVelocity(-2);
+
+        Mount rapidFireIcon(rapidFire, 20, window.getSize().x/2.0 - 25 - 150, 30, 0, 0);
+        Mount damageIcon(damage, 20, window.getSize().x/2.0 - 25 - 100, 30, 0, 0);
+        Mount sprayFireIcon(spray, 20, window.getSize().x/2.0 - 25 - 50, 30, 0, 0);
+        Mount backwardsFireIcon(backwards, 20, window.getSize().x/2.0 - 25, 30, 0, 0);
+        Mount shieldIcon(shieldUp, 20, window.getSize().x/2.0 + 25, 30, 0, 0);
+        Mount timeIcon(slowTime, 20, window.getSize().x/2.0 + 25 + 50, 30, 0, 0);
+        Mount turretIcon(turret, 20, window.getSize().x/2.0 + 25 + 100, 30, 0, 0);
+        Mount fighterIcon(wingman, 20, window.getSize().x/2.0 + 25 + 150, 30, 0, 0);
+
+        Rider redFilterTemp(redFilter, 100);
+        redFilterTemp.setColor(Color(redFilterTemp.getColor().r, redFilterTemp.getColor().g, redFilterTemp.getColor().b, 155));
+        auto filterRect = redFilterTemp.getLocalBounds();
+
+        rapidFireIcon.addRider(redFilterTemp);
+        damageIcon.addRider(redFilterTemp);
+        sprayFireIcon.addRider(redFilterTemp);
+        backwardsFireIcon.addRider(redFilterTemp);
+        shieldIcon.addRider(redFilterTemp);
+        timeIcon.addRider(redFilterTemp);
+        turretIcon.addRider(redFilterTemp);
+        fighterIcon.addRider(redFilterTemp);
+
+        vector<int> highScores;
+        vector<std::string> highScoresDates;
+        ifstream fin("scores");
+
+        if (fin.is_open()) {
+            string name;
+            int scoreHold;
+            while (!fin.eof()) {
+                fin >> name;
+                fin >> scoreHold;
+                highScores.push_back(scoreHold);
+                highScoresDates.push_back(name);
+            }
+        } else {
+            highScores.push_back(0);
+            highScoresDates.push_back("0");
+        }
+
+        fin.close();
+
+        score.setString("0");
+
+        MySprite scoreBox(scoreBar, 40);
+        scoreBox.setOrigin(0, 0);
+        scoreBox.setPosition(8, 8);
 
         gui.push_back(&backSprite);
+        gui.push_back(&scoreBox);
         gui.push_back(&score);
 
         for (int i = 0; i < player.getLives(); i++)
@@ -336,26 +429,65 @@ private:
             window.clear(Color::Black);           // clear the contents of the old frame
             // by setting the window to black
 
-            if (shieldTimer.getElapsedTime().asSeconds() > 5) player.setShield(false);
-            if (poweredUpRapid && rapidFireClock.getElapsedTime().asSeconds() > 12) poweredUpRapid = false;
-            if (poweredUpDamage && damageClock.getElapsedTime().asSeconds() > 12) poweredUpDamage = false;
-            if (poweredUpSpray && sprayFireClock.getElapsedTime().asSeconds() > 12) poweredUpSpray = false;
-            if (poweredUpbackwards && backwardsClock.getElapsedTime().asSeconds() > 12) poweredUpbackwards = false;
-            if (poweredUpFighter && fighterClock.getElapsedTime().asSeconds() > 12) {
+            int shortTime = 5, longTime = 12;
+
+            if (shieldTimer.getElapsedTime().asSeconds() > shortTime) player.setShield(false);
+            else if (player.hasShield()) {
+                double secs = shieldTimer.getElapsedTime().asSeconds();
+                shieldIcon.getRidersForEdit()->at(0).setTextureRect(IntRect(filterRect.left, filterRect.top * secs/shortTime, filterRect.width, filterRect.height * secs/shortTime));
+            }
+
+            if (poweredUpRapid && rapidFireClock.getElapsedTime().asSeconds() > longTime) poweredUpRapid = false;
+            else if (poweredUpRapid) {
+                double secs = rapidFireClock.getElapsedTime().asSeconds();
+                rapidFireIcon.getRidersForEdit()->at(0).setTextureRect(IntRect(filterRect.left, filterRect.top * secs/longTime, filterRect.width, filterRect.height * secs/longTime));
+            }
+
+            if (poweredUpDamage && damageClock.getElapsedTime().asSeconds() > longTime) poweredUpDamage = false;
+            else if (poweredUpDamage) {
+                double secs = damageClock.getElapsedTime().asSeconds();
+                damageIcon.getRidersForEdit()->at(0).setTextureRect(IntRect(filterRect.left, filterRect.top * secs/longTime, filterRect.width, filterRect.height * secs/longTime));
+            }
+
+            if (poweredUpSpray && sprayFireClock.getElapsedTime().asSeconds() > longTime) poweredUpSpray = false;
+            else if (poweredUpSpray) {
+                double secs = sprayFireClock.getElapsedTime().asSeconds();
+                sprayFireIcon.getRidersForEdit()->at(0).setTextureRect(IntRect(filterRect.left, filterRect.top * secs/longTime, filterRect.width, filterRect.height * secs/longTime));
+            }
+
+            if (poweredUpbackwards && backwardsClock.getElapsedTime().asSeconds() > longTime) poweredUpbackwards = false;
+            else if (poweredUpbackwards) {
+                double secs = backwardsClock.getElapsedTime().asSeconds();
+                backwardsFireIcon.getRidersForEdit()->at(0).setTextureRect(IntRect(filterRect.left, filterRect.top * secs/longTime, filterRect.width, filterRect.height * secs/longTime));
+            }
+
+            if (poweredUpFighter && fighterClock.getElapsedTime().asSeconds() > longTime) {
                 poweredUpFighter = false;
                 fighter.setPosition(-20, -20);
                 fighter.setVelocity(0);
                 fighter.setDirection(0);
+            } else if (poweredUpFighter) {
+                double secs = fighterClock.getElapsedTime().asSeconds();
+                fighterIcon.getRidersForEdit()->at(0).setTextureRect(IntRect(filterRect.left, filterRect.top * secs/longTime, filterRect.width, filterRect.height * secs/longTime));
             }
-            if (poweredUpTurret && turretClock.getElapsedTime().asSeconds() > 12) {
+
+            if (poweredUpTurret && turretClock.getElapsedTime().asSeconds() > longTime) {
                 poweredUpTurret = false;
                 player.removeRider(0);
-            } if (poweredUpTime && timeClock.getElapsedTime().asSeconds() > 5) {
+            } else if (poweredUpTurret) {
+                double secs = turretClock.getElapsedTime().asSeconds();
+                turretIcon.getRidersForEdit()->at(0).setTextureRect(IntRect(filterRect.left, filterRect.top * secs/longTime, filterRect.width, filterRect.height * secs/longTime));
+            }
+
+            if (poweredUpTime && timeClock.getElapsedTime().asSeconds() > shortTime) {
                 for (auto e : enemies) {
                     e->setVelocity(e->getVelocity() * 8);
                 }
 
                 poweredUpTime = false;
+            } else if (poweredUpTime) {
+                double secs = timeClock.getElapsedTime().asSeconds();
+                timeIcon.getRidersForEdit()->at(0).setTextureRect(IntRect(filterRect.left, filterRect.top * secs/shortTime, filterRect.width, filterRect.height * secs/shortTime));
             }
 
             //****************************************
@@ -440,7 +572,7 @@ private:
             //  Spawn cycle below here
             //****************************************
 
-            uniform_int_distribution<int> stroidChance(1, 32), powerUpChance(1, 50),
+            uniform_int_distribution<int> stroidChance(1, 32), powerUpChance(1, 35),
                     powerUp(1, 8), stroidSize(1, 3),
                     smallTexture(0, smallAsteroids.size() - 1),
                     mediumTexture(0, mediumAsteroids.size() - 1),
@@ -735,7 +867,7 @@ private:
                                     timeClock.restart();
                                 } else if (enemies[i]->getRiders()[0].getType() == "Shield") {
                                     shieldTimer.restart();
-                                    player.setShield(true, &shield, 12, &shieldTimer);
+                                    if (!player.hasShield()) player.setShield(true, &shield, 12, &shieldTimer);
                                 }
                             }
 
@@ -765,11 +897,75 @@ private:
                         enemies.erase(enemies.begin() + i);
                     }
                 } else if (!ended && Collision::CircleTest(*enemies[i], player)) {
-                    if (player.hit(window, animations, explosion, gen, shield, 12, shieldTimer)) {
+                    if (player.hit(window, animations, explosion, gen)) {
                         ended = true;
+                        player.setShield(false);
                         playerLost.play();
-                    } else playerBoom.play();
 
+                        if (highScores[0] == 0) {
+                            time_t now = time(0);
+                            tm *ltm = localtime(&now);
+
+                            highScores[0] = player.getScore();
+                            highScoresDates[0] = to_string(ltm->tm_mday) + "/" + to_string(1 + ltm->tm_mon) + "/" + to_string(1900 + ltm->tm_year);
+                        }
+                        else {
+                            bool inserted = false;
+                            for (int j = 0; j < highScores.size(); j++) {
+                                if (player.getScore() > highScores[j]) {
+                                    inserted = true;
+
+                                    highScores.insert(highScores.begin() + j, player.getScore());
+
+                                    time_t now = time(0);
+                                    tm *ltm = localtime(&now);
+
+                                    highScoresDates.insert(highScoresDates.begin() + j, to_string(ltm->tm_mday) + "/" + to_string(1 + ltm->tm_mon) + "/" + to_string(1900 + ltm->tm_year));
+
+                                    if (highScores.size() > 10) {
+                                        highScores.pop_back();
+                                        highScoresDates.pop_back();
+                                    }
+                                    break;
+                                }
+                            }
+
+                            if (!inserted && highScores.size() < 10) {
+                                highScores.push_back(player.getScore());
+
+                                time_t now = time(0);
+                                tm *ltm = localtime(&now);
+                                highScoresDates.push_back(to_string(ltm->tm_mday) + "/" + to_string(1 + ltm->tm_mon) + "/" + to_string(1900 + ltm->tm_year));
+                            }
+                        }
+
+                        ofstream fout("scores");
+                        for (int j = 0; j < highScores.size(); j++) {
+                            fout << highScoresDates[j] << " " << highScores[j];
+                            if (j != highScores.size() - 1) fout << endl;
+
+                            highScoreEntries[j].setString(to_string(highScores[j]));
+                            highScoreEntriesDates[j].setString(highScoresDates[j]);
+
+                            int widthEntry = highScoreEntries[0].getGlobalBounds().width;
+                            int widthEntryDate = highScoreEntriesDates[0].getGlobalBounds().width;
+                            int spaceBetween = 150 - widthEntryDate;
+                            int dateLoc = (window.getSize().x - (widthEntry + widthEntryDate + spaceBetween))/2;
+
+                            cout << widthEntryDate << " " << widthEntry << " " << spaceBetween << endl;
+
+                            highScoreEntriesDates[j].setPosition(dateLoc, window.getSize().y/1.8 + (25 * j));
+                            highScoreEntries[j].setPosition(dateLoc + 150, window.getSize().y/1.8 + (25 * j));
+                        }
+
+                        fout.close();
+                    } else {
+                        playerBoom.play();
+                        player.setShield(true, &shield, 12, &shieldTimer);
+                    }
+
+                    poweredUpDamage = false;
+                    poweredUpSpray = false;
                     poweredUpRapid = false;
                     poweredUpbackwards = false;
 
@@ -778,12 +974,18 @@ private:
                     fighter.setVelocity(0);
                     fighter.setDirection(0);
 
+                    if (poweredUpTurret) player.removeRider(0);
                     poweredUpTurret = false;
-                    player.removeRider(0);
 
-                    for (auto e : enemies)
-                        e->setVelocity(e->getVelocity() * 8);
+                    if (poweredUpTime) {
+                        for (auto e : enemies)
+                            e->setVelocity(e->getVelocity() * 8);
+                    }
                     poweredUpTime = false;
+
+                    for (int j = 0; j < projectiles.size(); j++) {
+                        projectiles.erase(projectiles.begin() + j);
+                    }
 
                     lives.erase(lives.begin() + player.getLives()); //remove player icon from top corner
                 }
@@ -796,7 +998,7 @@ private:
                 }
             }
 
-            score.setString("Score: " + to_string(player.getScore()));
+            score.setString(to_string(player.getScore()));
 
             if (player.getScore() - (player.getNewLifeScore() * player.getNumLivesAdded()) >=
                 player.getNewLifeScore()) {
@@ -841,6 +1043,11 @@ private:
                 }
             } else {
                 for (auto & i : lost) window.draw(*i);
+
+                for (int i = 0; i < highScores.size(); i++) {
+                    window.draw(highScoreEntriesDates[i]);
+                    window.draw(highScoreEntries[i]);
+                }
             }
 
             for (int i = 1; i < gui.size(); i++) {
@@ -849,6 +1056,39 @@ private:
 
             for (auto i: lives) {
                 window.draw(i);
+            }
+
+            if (poweredUpRapid) {
+                window.draw(rapidFireIcon);
+                window.draw(rapidFireIcon.getRiders()[0]);
+            }
+            if (poweredUpDamage) {
+                window.draw(damageIcon);
+                window.draw(damageIcon.getRiders()[0]);
+            }
+            if (poweredUpbackwards) {
+                window.draw(backwardsFireIcon);
+                window.draw(backwardsFireIcon.getRiders()[0]);
+            }
+            if (poweredUpSpray) {
+                window.draw(sprayFireIcon);
+                window.draw(sprayFireIcon.getRiders()[0]);
+            }
+            if (player.hasShield()) {
+                window.draw(shieldIcon);
+                window.draw(shieldIcon.getRiders()[0]);
+            }
+            if (poweredUpTime) {
+                window.draw(timeIcon);
+                window.draw(timeIcon.getRiders()[0]);
+            }
+            if (poweredUpTurret) {
+                window.draw(turretIcon);
+                window.draw(turretIcon.getRiders()[0]);
+            }
+            if (poweredUpFighter) {
+                window.draw(fighterIcon);
+                window.draw(fighterIcon.getRiders()[0]);
             }
             //****************************************
             //  ADD ALL OF OUR DRAWING ABOVE HERE

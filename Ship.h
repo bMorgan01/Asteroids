@@ -15,7 +15,7 @@ public:
         sound.play();
     }
 
-    bool hit(RenderWindow &window, vector<MySprite> &animations, Texture &explosionTexture, default_random_engine &gen, Texture &shieldTexture, int scale, Clock &timer) {
+    bool hit(RenderWindow &window, vector<MySprite> &animations, Texture &explosionTexture, default_random_engine &gen) {
         uniform_int_distribution<int> angle(0, 359);
         animations.emplace_back(explosionTexture, 100, getXPos(), getYPos(), 0, angle(gen));
         animations[animations.size() - 1].makeAnimated(5, 5, 0.01,23);
@@ -24,7 +24,6 @@ public:
         setDirection(0);
         setVelocity(0);
         lives--;
-        setShield(true, &shieldTexture, scale, &timer);
 
         return lives <= 0;
     }

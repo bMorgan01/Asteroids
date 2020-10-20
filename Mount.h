@@ -25,8 +25,13 @@ public:
     }
 
     void addRider(Rider &sprite, int index = -1) {
-        if (index == -1) riders.push_back(sprite);
-        else riders.insert(riders.begin() + index, sprite);
+        if (index == -1) {
+            riders.push_back(sprite);
+            riders[riders.size() - 1].setPosition(getPosition());
+        } else {
+            riders.insert(riders.begin() + index, sprite);
+            riders[index].setPosition(getPosition());
+        }
     }
 
     void removeRider(int index = -1) {
